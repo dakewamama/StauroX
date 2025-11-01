@@ -30,8 +30,10 @@ impl MultiRpcClient {
         &self,
         signature: &Signature,
     ) -> Result<EncodedConfirmedTransactionWithStatusMeta> {
-        let results = self.fetch_from_all_rpcs(|client| {
-            client.get_transaction(signature, UiTransactionEncoding::Json)
+        let signature = *signature;  // FIXED: Copy signature to avoid lifetime issues
+        
+        let results = self.fetch_from_all_rpcs(move |client| {
+            client.get_transaction(&signature, UiTransactionEncoding::Json)
         }).await;
 
         self.consensus.has_minimum_responses(&results)?;
@@ -42,7 +44,7 @@ impl MultiRpcClient {
             self.clients.len()
         );
 
-        // Return first result (they should all be identical for same signature)
+        // Return first result
         results.into_iter().next().ok_or_else(|| {
             crate::error::StauroXError::consensus_failure(0, self.consensus.threshold())
         })

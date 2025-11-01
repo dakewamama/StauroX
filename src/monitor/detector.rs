@@ -55,7 +55,7 @@ impl NetworkDetector {
         let significant_forks = slot_groups
             .values()
             .filter(|sources| {
-                let support_percent = (*sources as f64 / total_sources as f64) * 100.0;
+                let support_percent = (**sources as f64 / total_sources as f64) * 100.0;
                 support_percent > FORK_SUPPORT_THRESHOLD
             })
             .count();

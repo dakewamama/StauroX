@@ -7,14 +7,14 @@ use crate::error::{Result, StauroXError};
 /// Generic consensus engine - works with any type
 pub struct ConsensusEngine {
     threshold: usize,
-    total_sources: usize,
+    _total_sources: usize,
 }
 
 impl ConsensusEngine {
-    pub fn new(threshold: usize, total_sources: usize) -> Self {
+    pub fn new(threshold: usize, _total_sources: usize) -> Self {
         Self {
             threshold,
-            total_sources,
+            _total_sources,
         }
     }
 
