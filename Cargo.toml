@@ -17,7 +17,7 @@ anchor-lang = "0.29"
 anchor-client = "0.29"
 
 # HTTP & API
-axum = "0.7"
+axum = { version = "0.7", features = ["ws"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 

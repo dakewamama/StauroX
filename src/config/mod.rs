@@ -15,15 +15,15 @@ impl Network {
         match self {
             Network::Mainnet => vec![
                 "https://api.mainnet-beta.solana.com".to_string(),
+                "https://solana.publicnode.com".to_string(),
                 "https://rpc.ankr.com/solana".to_string(),
                 "https://solana-api.projectserum.com".to_string(),
-                "https://solana.publicnode.com".to_string(),
             ],
             Network::Devnet => vec![
                 "https://api.devnet.solana.com".to_string(),
-                "https://rpc-devnet.helius.xyz".to_string(),
-                "https://devnet.rpcpool.com".to_string(),
-                "https://api.devnet.solana.com".to_string(),
+                "https://devnet.sonic.game".to_string(),
+                "https://rpc-devnet.aws.metaplex.com".to_string(),
+                "https://devnet.genesysgo.net".to_string(),
             ],
         }
     }
@@ -36,7 +36,7 @@ impl Network {
     }
 }
 
-/// StauroX configuration
+// StauroX configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub network: Network,

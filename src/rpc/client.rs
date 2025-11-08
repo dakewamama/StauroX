@@ -75,8 +75,8 @@ impl MultiRpcClient {
             let handle = tokio::spawn(async move {
                 match fetch_fn(&client) {
                     Ok(result) => Some((idx, result)),
-                    Err(e) => {
-                        warn!("RPC {} failed: {}", idx, e);
+                    Err(_e) => {
+                        //warn!("RPC {} failed: {}", idx, e);
                         None
                     }
                 }
