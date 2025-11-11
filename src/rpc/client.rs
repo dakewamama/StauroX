@@ -66,6 +66,7 @@ impl MultiRpcClient {
         Ok(consensus_slot)
     }
 
+    
     /// Generic method to fetch from all RPCs in parallel
     async fn fetch_from_all_rpcs<T, F>(&self, fetch_fn: F) -> Vec<T>
     where
@@ -82,7 +83,6 @@ impl MultiRpcClient {
                 match fetch_fn(&client) {
                     Ok(result) => Some((idx, result)),
                     Err(e) => {
-                        // Log the actual error so we can debug
                         warn!("RPC {} failed: {}", idx, e);
                         None
                     }
@@ -92,13 +92,26 @@ impl MultiRpcClient {
             handles.push(handle);
         }
 
-        // Collect successful results
+        // Collect results as they come in, stop when we have enough
         let mut results = vec![];
-        for handle in handles {
-            if let Ok(Some((idx, result))) = handle.await {
+        let threshold = self.consensus.threshold();
+        
+        while !handles.is_empty() && results.len() < threshold.max(self.clients.len()) {
+            // Race all remaining handles
+            let (result, _index, remaining) = futures::future::select_all(handles).await;
+            
+            if let Ok(Some((idx, data))) = result {
                 debug!("RPC {} responded successfully", idx);
-                results.push(result);
+                results.push(data);
+                
+                // Early exit if we have enough responses
+                if results.len() >= threshold {
+                    debug!("Threshold met ({}/{}), canceling remaining requests", results.len(), threshold);
+                    break;
+                }
             }
+            
+            handles = remaining;
         }
 
         results
