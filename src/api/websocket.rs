@@ -24,8 +24,8 @@ impl WsState {
         Self { tx }
     }
 
-    pub fn broadcast(&self, event: VerificationEvent) {
-        let _ = self.tx.send(event);
+        pub fn broadcast(&self, event: VerificationEvent) {
+                let _ = self.tx.send(event);
     }
 }
 

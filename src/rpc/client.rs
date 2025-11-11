@@ -30,14 +30,20 @@ impl MultiRpcClient {
         &self,
         signature: &Signature,
     ) -> Result<EncodedConfirmedTransactionWithStatusMeta> {
-        let signature = *signature;  // FIXED: Copy signature to avoid lifetime issues
-        
+        let signature = *signature;
+    
         let results = self.fetch_from_all_rpcs(move |client| {
-            client.get_transaction(&signature, UiTransactionEncoding::Json)
+            // Enable versioned transactions support
+            let config = solana_client::rpc_config::RpcTransactionConfig {
+                encoding: Some(UiTransactionEncoding::Json),
+                commitment: Some(solana_sdk::commitment_config::CommitmentConfig::confirmed()),
+                max_supported_transaction_version: Some(0),  // CRITICAL: Support v0 transactions
+            };
+            client.get_transaction_with_config(&signature, config)
         }).await;
 
         self.consensus.has_minimum_responses(&results)?;
-        
+    
         debug!(
             "Transaction consensus: {}/{} RPCs responded",
             results.len(),
@@ -75,8 +81,9 @@ impl MultiRpcClient {
             let handle = tokio::spawn(async move {
                 match fetch_fn(&client) {
                     Ok(result) => Some((idx, result)),
-                    Err(_e) => {
-                        //warn!("RPC {} failed: {}", idx, e);
+                    Err(e) => {
+                        // Log the actual error so we can debug
+                        warn!("RPC {} failed: {}", idx, e);
                         None
                     }
                 }

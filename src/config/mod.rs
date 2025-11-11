@@ -16,14 +16,10 @@ impl Network {
             Network::Mainnet => vec![
                 "https://api.mainnet-beta.solana.com".to_string(),
                 "https://solana.publicnode.com".to_string(),
-                "https://rpc.ankr.com/solana".to_string(),
-                "https://solana-api.projectserum.com".to_string(),
             ],
             Network::Devnet => vec![
                 "https://api.devnet.solana.com".to_string(),
                 "https://devnet.sonic.game".to_string(),
-                "https://rpc-devnet.aws.metaplex.com".to_string(),
-                "https://devnet.genesysgo.net".to_string(),
             ],
         }
     }
@@ -138,11 +134,11 @@ impl Config {
             network,
             rpc: RpcConfig {
                 endpoints: network.default_endpoints(),
-                consensus_threshold: 3,
-                request_timeout_ms: 5000,
+                consensus_threshold: 1,
+                request_timeout_ms: 10000,
             },
             monitoring: MonitoringConfig {
-                health_check_interval_ms: 400,
+                health_check_interval_ms: 2000,
                 slot_retention_seconds: 30,
                 stale_threshold_seconds: 5,
             },
