@@ -26,32 +26,6 @@ pub struct VerifyRequest {
     pub signature: String,
 }
 
-/// Response for verification
-#[derive(Debug, Serialize)]
-pub struct VerifyResponse {
-    pub signature: String,
-    pub verified: bool,
-    pub slot: u64,
-    pub risk_score: f64,
-    pub finality_level: String,
-    pub network_health: String,
-    pub timestamp: String,
-}
-
-impl From<VerificationResult> for VerifyResponse {
-    fn from(result: VerificationResult) -> Self {
-        Self {
-            signature: result.signature.to_string(),
-            verified: result.verified,
-            slot: result.slot,
-            risk_score: result.risk_score,
-            finality_level: format!("{:?}", result.finality_level),
-            network_health: format!("{:?}", result.network_health),
-            timestamp: result.timestamp.to_rfc3339(),
-        }
-    }
-}
-
 /// Health check response
 #[derive(Debug, Serialize)]
 pub struct HealthResponse {
@@ -74,7 +48,7 @@ async fn health_check(State(state): State<ApiState>) -> impl IntoResponse {
     
     Json(HealthResponse {
         status: "ok".to_string(),
-        network: format!("{:?}", network_health),  // Changed from network_health
+        network: format!("{:?}", network_health),
     })
 }
 
@@ -82,7 +56,7 @@ async fn health_check(State(state): State<ApiState>) -> impl IntoResponse {
 async fn verify_transaction(
     State(state): State<ApiState>,
     Json(payload): Json<VerifyRequest>,
-) -> Result<Json<VerifyResponse>, AppError> {
+) -> Result<Json<VerificationResult>, AppError> {
     info!("API: Verifying transaction {}", payload.signature);
 
     let signature = payload
@@ -96,14 +70,14 @@ async fn verify_transaction(
         .await
         .map_err(AppError::Verification)?;
 
-    Ok(Json(result.into()))
+    Ok(Json(result))
 }
 
 /// Get verification status endpoint
 async fn get_verification(
     State(state): State<ApiState>,
     Path(signature): Path<String>,
-) -> Result<Json<VerifyResponse>, AppError> {
+) -> Result<Json<VerificationResult>, AppError> {
     info!("API: Getting verification for {}", signature);
 
     let signature = signature
@@ -116,7 +90,7 @@ async fn get_verification(
         .await
         .map_err(AppError::Verification)?;
 
-    Ok(Json(result.into()))
+    Ok(Json(result))
 }
 
 /// API error wrapper

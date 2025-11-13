@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use crate::types::{NetworkHealth, SlotObservation};
 
-/// Constants for network health detection
+// Constants for network health detection
 const FORK_SUPPORT_THRESHOLD: f64 = 30.0;
 const HEALTHY_LAG_TOLERANCE: u64 = 2;
 
-/// Detector for network forks and halts
+// Detector for network forks and halts
 pub struct NetworkDetector {
     stale_threshold_secs: i64,
 }
@@ -18,7 +18,7 @@ impl NetworkDetector {
         }
     }
 
-    /// Determine network health from observations
+    // Determine network health from observations
     pub fn detect_health(
         &self,
         observations: &HashMap<String, SlotObservation>,

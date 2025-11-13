@@ -5,18 +5,20 @@ use tracing::{debug, info, warn};
 
 use crate::error::{Result, StauroXError};
 use crate::monitor::HealthMonitor;
+use crate::parsers::TransactionParser;
 use crate::rpc::MultiRpcClient;
 use crate::types::{FinalityLevel, NetworkHealth, VerificationResult};
 
 use super::finality::FinalityChecker;
 use super::risk::RiskScorer;
 
-// Main verification engine - orchestrates the complete verification pipeline
+/// Main verification engine - orchestrates the complete verification pipeline
 pub struct VerificationEngine {
     rpc_client: Arc<MultiRpcClient>,
     pub health_monitor: Arc<HealthMonitor>,
     _finality_checker: FinalityChecker,
     risk_scorer: RiskScorer,
+    parser: TransactionParser,
 }
 
 impl VerificationEngine {
@@ -29,10 +31,20 @@ impl VerificationEngine {
             health_monitor,
             _finality_checker: FinalityChecker::new(),
             risk_scorer: RiskScorer::new(),
+            parser: TransactionParser::new(),
         }
     }
 
-    // Main verification entry point
+    /// Main verification entry point
+    /// 
+    /// Verification Pipeline:
+    /// 1. Check network health (refuse if halted)
+    /// 2. Fetch transaction from multiple RPCs with consensus
+    /// 3. Parse bridge transaction (if applicable)
+    /// 4. Verify transaction succeeded on-chain
+    /// 5. Determine finality level based on slot age
+    /// 6. Calculate risk score
+    /// 7. Return verification result
     pub async fn verify_transaction(
         &self,
         signature: &Signature,
@@ -45,6 +57,28 @@ impl VerificationEngine {
         // Step 2: Fetch Transaction with Consensus
         let (tx, consensus_count) = self.fetch_transaction_with_metadata(signature).await?;
         
+        // Step 2.5: Parse bridge transaction (NEW)
+        info!("Attempting to parse bridge transaction...");
+        let parsed_tx = match self.parser.parse_transaction(&tx) {
+            Ok(Some(parsed)) => {
+                info!(
+                    "✓ Parsed {} bridge: amount={:?}, target_chain={:?}",
+                    parsed.bridge_name(),
+                    parsed.amount(),
+                    parsed.target_chain()
+                );
+                Some(parsed)
+            }
+            Ok(None) => {
+                info!("Not a bridge transaction");
+                None
+            }
+            Err(e) => {
+                warn!("Failed to parse transaction: {}", e);
+                None
+            }
+        };
+        
         // Step 3: Verify Transaction Success
         let tx_success = self.check_transaction_success(&tx)?;
         
@@ -53,7 +87,8 @@ impl VerificationEngine {
                 *signature,
                 tx.slot,
                 network_health,
-                "Transaction failed on-chain"
+                "Transaction failed on-chain",
+                None,
             );
         }
 
@@ -70,7 +105,8 @@ impl VerificationEngine {
             .with_finality(finality)
             .with_network_health(network_health)
             .with_risk_score(risk_score)
-            .with_consensus(consensus_count as u8);
+            .with_consensus(consensus_count as u8)
+            .with_parsed_transaction(parsed_tx);
 
         info!(
             "✓ Verification complete: slot={}, finality={:?}, risk={:.3}",
@@ -80,7 +116,7 @@ impl VerificationEngine {
         Ok(result)
     }
 
-    // Step 1: Check network health
+    /// Step 1: Check network health
     async fn check_network_health(&self) -> Result<NetworkHealth> {
         let health = self.health_monitor.get_health().await;
         
@@ -95,7 +131,7 @@ impl VerificationEngine {
         Ok(health)
     }
 
-    // Step 2: Fetch transaction with consensus tracking
+    /// Step 2: Fetch transaction with consensus tracking
     async fn fetch_transaction_with_metadata(
         &self,
         signature: &Signature,
@@ -105,9 +141,7 @@ impl VerificationEngine {
             .fetch_transaction_with_consensus(signature)
             .await?;
 
-        // Track how many RPCs actually responded
-        // For now we get 1+ responses (threshold met), full consensus tracking in Phase 2
-        let consensus_count = 1; // Will be properly tracked when we refactor MultiRpcClient
+        let consensus_count = 1;
         
         debug!(
             "Transaction fetched: slot={}, consensus={}/{}",
@@ -139,11 +173,9 @@ impl VerificationEngine {
 
     /// Step 4: Determine finality level based on slot age
     async fn determine_finality_level(&self, tx_slot: u64) -> Result<FinalityLevel> {
-        // Get current slot
         let current_slot = self.rpc_client.get_slot_with_consensus().await?;
         let slot_age = current_slot.saturating_sub(tx_slot);
 
-        // Finality levels based on Solana's consensus:
         let finality = match slot_age {
             0..=31 => FinalityLevel::Fast,
             32..=63 => FinalityLevel::Safe,
@@ -181,15 +213,17 @@ impl VerificationEngine {
         slot: u64,
         network_health: NetworkHealth,
         reason: &str,
+        parsed_tx: Option<crate::parsers::ParsedTransaction>,
     ) -> Result<VerificationResult> {
         warn!("Verification failed: {}", reason);
         
         Ok(VerificationResult::new(signature, slot)
             .with_verification(false)
-            .with_finality(FinalityLevel::Fast) // Doesn't matter for failed tx
+            .with_finality(FinalityLevel::Fast)
             .with_network_health(network_health)
-            .with_risk_score(1.0) // Maximum risk
-            .with_consensus(0u8))
+            .with_risk_score(1.0)
+            .with_consensus(0u8)
+            .with_parsed_transaction(parsed_tx))
     }
 
     /// Batch verify multiple transactions
@@ -234,7 +268,6 @@ mod tests {
             service.health_monitor(),
         );
 
-        // 2 RPCs configured
         assert_eq!(engine.calculate_consensus_ratio(2), 1.0);
         assert_eq!(engine.calculate_consensus_ratio(1), 0.5);
     }

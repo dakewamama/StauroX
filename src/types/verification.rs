@@ -3,13 +3,14 @@ use serde::{Deserialize, Serialize};
 use solana_sdk::signature::Signature;
 
 use super::network::NetworkHealth;
+use crate::parsers::ParsedTransaction;
 
 /// Finality confidence levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum FinalityLevel {
-    Fast,      // 66% stake
-    Safe,      // 80% stake
-    UltraSafe, // 90% stake
+    Fast,
+    Safe,
+    UltraSafe,
 }
 
 impl FinalityLevel {
@@ -35,6 +36,7 @@ impl FinalityLevel {
 /// Complete verification result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationResult {
+    #[serde(serialize_with = "serialize_signature")]
     pub signature: Signature,
     pub slot: u64,
     pub verified: bool,
@@ -43,6 +45,16 @@ pub struct VerificationResult {
     pub network_health: NetworkHealth,
     pub consensus_count: u8,
     pub timestamp: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parsed_transaction: Option<ParsedTransaction>,
+}
+
+// Custom serializer for Signature (as string instead of byte array)
+fn serialize_signature<S>(sig: &Signature, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(&sig.to_string())
 }
 
 impl VerificationResult {
@@ -56,6 +68,7 @@ impl VerificationResult {
             network_health: NetworkHealth::Healthy,
             consensus_count: 0,
             timestamp: Utc::now(),
+            parsed_transaction: None,
         }
     }
 
@@ -81,6 +94,11 @@ impl VerificationResult {
 
     pub fn with_risk_score(mut self, score: f64) -> Self {
         self.risk_score = score.clamp(0.0, 1.0);
+        self
+    }
+
+    pub fn with_parsed_transaction(mut self, parsed: Option<ParsedTransaction>) -> Self {
+        self.parsed_transaction = parsed;
         self
     }
 
