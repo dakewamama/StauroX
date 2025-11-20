@@ -1,1 +1,39 @@
-/target
+# Rust
+target/
+**/*.rs.bk
+*.pdb
+
+# Anchor
+.anchor/
+test-ledger/
+.DS_Store
+
+# Node
+node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+
+# Build outputs
+*.so
+*.wasm
+dist/
+build/
+
+# Keys (CRITICAL - never commit these)
+*.json
+!package.json
+!tsconfig.json
+!Anchor.toml
