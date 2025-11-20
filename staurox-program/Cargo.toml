@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "programs/*"
-]
+, "staurox-client"]
 resolver = "2"
 
 [profile.release]

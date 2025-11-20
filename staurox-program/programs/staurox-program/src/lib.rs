@@ -46,7 +46,7 @@ pub mod staurox_program {
         
         let index = log.ring_buffer_head as usize;
         log.recent[index] = verification;
-        log.ring_buffer_head = ((log.ring_buffer_head + 1) % 1000) as u16;
+        log.ring_buffer_head = ((log.ring_buffer_head + 1) % 100) as u16;
         
         log.total_verifications += 1;
         if verified {

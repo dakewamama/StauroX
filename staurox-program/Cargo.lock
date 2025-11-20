@@ -1306,6 +1306,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "staurox-client"
+version = "0.1.0"
+
+[[package]]
 name = "staurox-program"
 version = "0.1.0"
 dependencies = [

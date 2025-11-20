@@ -26,7 +26,7 @@ pub struct VerificationLog {
 }
 
 /// Compact verification record (82 bytes)
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Default)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy)]
 pub struct CompactVerification {
     /// Transaction signature (64 bytes)
     pub signature: [u8; 64],
@@ -42,6 +42,19 @@ pub struct CompactVerification {
     
     /// Unix timestamp
     pub timestamp: i64,
+}
+
+// Manual Default implementation because [u8; 64] doesn't derive Default
+impl Default for CompactVerification {
+    fn default() -> Self {
+        Self {
+            signature: [0; 64],
+            slot: 0,
+            verified: false,
+            risk_score: 0,
+            timestamp: 0,
+        }
+    }
 }
 
 impl VerificationLog {
